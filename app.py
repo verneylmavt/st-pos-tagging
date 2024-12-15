@@ -298,7 +298,7 @@ def main():
             st.warning("Please enter some text.")
             
     st.feedback("thumbs")
-    st.warning("""Check here for more details: [GitHub Repo🐙](https://github.com/verneylmavt/st-pos=tagging)""")
+    st.warning("""Check here for more details: [GitHub Repo🐙](https://github.com/verneylmavt/st-pos-tagging)""")
     st.divider()
     
     st.subheader("""Pre-Processing""")
