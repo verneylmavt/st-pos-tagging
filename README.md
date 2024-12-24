@@ -1,6 +1,6 @@
 # 🏷️ POS Tagging Model Collections
 
-This repository machine learning models of POS Tagging, designed to be deployed using ONNX and utilized in a Streamlit-based web application. The app provides an interactive interface for performing various tasks using neural network architectures. [Check here to see other ML models](https://github.com/verneylmavt/ml-model).
+This repository contains machine learning models of POS Tagging, designed to be deployed using ONNX and utilized in a Streamlit-based web application. The app provides an interactive interface for performing various tasks using neural network architectures. [Check here to see other ML models](https://github.com/verneylmavt/ml-model).
 
 ## 🎈 Demo App
 
