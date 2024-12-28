@@ -115,7 +115,11 @@ class Model(nn.Module):
     }
 }
 
-# @st.cache_resource
+# ----------------------
+# Loading Function
+# ----------------------
+
+@st.cache_resource
 def load_model(model_name, vocab):
     class SPositionalEncoding(nn.Module):
         def __init__(self, embed_size, max_len=5000):
@@ -189,7 +193,7 @@ def load_model(model_name, vocab):
         st.stop()
     return net
 
-# @st.cache_resource
+@st.cache_data
 def load_vocab(model_name):
     try:
         with open(os.path.join("models", "word2idx.json"), 'r') as json_file:
@@ -280,23 +284,39 @@ def main():
     
     model_names = list(model_info.keys())
     model = st.selectbox("Select a Model", model_names)
+    st.divider()
     
     word2idx, idx2pos = load_vocab(model)
     net = load_model(model, word2idx)
     
     st.subheader(model_info[model]["subheader"])
-    user_input = st.text_area("Enter Text Here:")
     
-    if st.button("Analyze"):
-        if user_input.strip():
-            with st.spinner('Analyzing...'):
-                tree, description = predict_pos_tag(net, word2idx, idx2pos, user_input)
-            st.code(TreePrettyPrinter(tree).text(), language="None")
-            pos_df = pd.DataFrame(list(description.items()), columns=['POS Tag', 'Description'])
-            st.table(pos_df.style.hide(axis="index"))
-        else:
-            st.warning("Please enter some text.")
-            
+    # user_input = st.text_input("Enter Text Here:")
+    # if st.button("Analyze"):
+    #     if user_input.strip():
+    #         with st.spinner('Analyzing...'):
+    #             tree, description = predict_pos_tag(net, word2idx, idx2pos, user_input)
+    #         st.code(TreePrettyPrinter(tree).text(), language="None")
+    #         pos_df = pd.DataFrame(list(description.items()), columns=['POS Tag', 'Description'])
+    #         st.table(pos_df.style.hide(axis="index"))
+    #     else:
+    #         st.warning("Please enter some text.")
+    
+    with st.form(key="pos_form"):
+        user_input = st.text_input("Enter Text Here:")
+        submit_button = st.form_submit_button(label="Tag")
+        
+        if submit_button:
+            if user_input.strip():
+                with st.spinner('Tagging...'):
+                    tree, description = predict_pos_tag(net, word2idx, idx2pos, user_input)
+                st.code(TreePrettyPrinter(tree).text(), language="None")
+                pos_df = pd.DataFrame(list(description.items()), columns=['POS Tag', 'Description'])
+                st.dataframe(pos_df, hide_index=True)
+            else:
+                st.warning("Please enter some text.")
+    
+    # st.divider()              
     st.feedback("thumbs")
     st.warning("""Check here for more details: [GitHub Repo🐙](https://github.com/verneylmavt/st-pos-tagging)""")
     st.divider()
