@@ -208,6 +208,25 @@ def load_vocab(model_name):
     except Exception as e:
         st.error(f"An error occurred while loading the vocabulary for {model_name}: {e}")
         st.stop()
+        
+@st.cache_data
+def load_training_data():
+    training_data = {
+        "Epoch": list(range(1, 21)),
+        "Train Loss": [
+            1.4515, 0.6043, 0.4385, 0.3609, 0.3075, 0.2768, 0.2486, 0.2318, 0.2118, 0.2045,
+            0.1889, 0.1811, 0.1700, 0.1661, 0.1586, 0.1483, 0.1435, 0.1377, 0.1356, 0.1293
+        ],
+        "Train Accuracy": [
+            0.5915, 0.8178, 0.8635, 0.8871, 0.9011, 0.9105, 0.9190, 0.9241, 0.9308, 0.9325,
+            0.9364, 0.9400, 0.9430, 0.9445, 0.9461, 0.9491, 0.9512, 0.9541, 0.9538, 0.9556
+        ],
+        "Validation Accuracy": [
+            0.7906, 0.8690, 0.8970, 0.9106, 0.9139, 0.9180, 0.9229, 0.9297, 0.9320, 0.9344,
+            0.9320, 0.9361, 0.9341, 0.9389, 0.9365, 0.9395, 0.9403, 0.9436, 0.9442, 0.9413
+        ],
+    }
+    return pd.DataFrame(training_data)
 
 # ----------------------
 # Prediction Function
@@ -288,6 +307,7 @@ def main():
     
     word2idx, idx2pos = load_vocab(model)
     net = load_model(model, word2idx)
+    training_data = load_training_data()
     
     st.subheader(model_info[model]["subheader"])
     
@@ -304,6 +324,7 @@ def main():
     
     with st.form(key="pos_form"):
         user_input = st.text_input("Enter Text Here:")
+        st.caption("_e.g. The quick brown fox jumps over the lazy dog._")
         submit_button = st.form_submit_button(label="Tag")
         
         if submit_button:
@@ -336,6 +357,17 @@ def main():
             st.caption(key)
             st.latex(value)
     else: pass
+    
+    st.subheader("""Training""")
+    st.line_chart(training_data.set_index("Epoch"))
+    
+    st.subheader("""Evaluation Metrics""")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Accuracy", "0.9436", border=True)
+    col2.metric("Precision", "0.9445", border=True)
+    col3.metric("Recall", "0.9436", border=True)
+    col4.metric("F1 Score", "0.9436", border=True)
+
 
 if __name__ == "__main__":
     main()
