@@ -1,6 +1,9 @@
 import os
 import json
 import streamlit as st
+from streamlit_extras.chart_container import chart_container
+from streamlit_extras.mention import mention
+from streamlit_extras.echo_expander import echo_expander
 from nltk.tree import Tree
 from nltk.tree.prettyprinter import TreePrettyPrinter
 import numpy as np
@@ -16,63 +19,64 @@ model_info = {
         "subheader": "Model: Multi-Head Transformer Encoder",
         "pre_processing": """
 Dataset = Penn TreeBank Dataset
+Tokenizer = NLTK("Word Tokenizer")
 Embedding Model = GloVe("6B.200d")
         """,
         "parameters": """
 Batch Size = 32
-Embedding Size = 200
-Number of Attention Heads = 8
-Number of Encoder Layers = 2
-Feedforward Hidden Size = 512
+
+Vocabulary Size = 5,602
+Embedding Dimension = 200
+Number of Attention Heads = 5
+Hidden Dimension = 507
+Number of Encoder Layers = 4
 Dropout Rate = 0.16426146772147993
-Learning Rate = 0.001102590574546097
+
 Epochs = 20
+Learning Rate = 0.001102590574546097
+Loss Function = CrossEntropyLoss
 Optimizer = AdamW
 Weight Decay = 0.01
-Loss Function = CrossEntropyLoss
 Hyperparameter Tuning: Bayesian Optimization
         """,
         "model_code": """
 class Encoding(nn.Module):
-    def __init__(self, embed_size, max_len=5000):
+    def __init__(self, embedding_dim, max_len=5000):
         super(Encoding, self).__init__()
-        pe = torch.zeros(max_len, embed_size)
+        pe = torch.zeros(max_len, embedding_dim)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, embed_size, 2).float() * (-np.log(10000.0) / embed_size))
+        div_term = torch.exp(torch.arange(0, embedding_dim, 2).float() * (-np.log(10000.0) / embedding_dim))
         pe[:, 0::2] = torch.sin(position * div_term)
-        if embed_size % 2 == 1:
+        if embedding_dim % 2 == 1:
             pe[:, 1::2] = torch.cos(position * div_term[:-1])
         else:
             pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)
         self.register_buffer('pe', pe)
+
     def forward(self, x):
         x = x + self.pe[:, :x.size(1), :]
         return x
 
+
 class Model(nn.Module):
-    def __init__(self, vocab_size, embed_size, num_heads, hidden_dim, num_layers, output_dim, padding_idx, embedding_matrix, dropout=0.1):
+    def __init__(self, vocab_size, embedding_dim, num_heads, hidden_dim, num_layers, output_dim, padding_idx, embedding_matrix, dropout=0.1):
         super(Model, self).__init__()
-        # Embedding Layer
-        self.embedding = nn.Embedding(vocab_size, embed_size, padding_idx=padding_idx)
+        self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=padding_idx)
         self.embedding.weight = nn.Parameter(embedding_matrix)
         self.embedding.weight.requires_grad = True
-        # Positional Encoding Layer
-        self.pos_encoder = SPositionalEncoding(embed_size)
-        # Transformer Encoder Layer
+        self.pos_encoder = Encoding(embedding_dim)
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=embed_size, 
+            d_model=embedding_dim, 
             nhead=num_heads, 
             dim_feedforward=hidden_dim, 
             dropout=dropout,
             batch_first=True
         )
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, norm=nn.LayerNorm(embed_size))
-        # Dropout Layer
+        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, norm=nn.LayerNorm(embedding_dim))
         self.dropout = nn.Dropout(dropout)
-        # Fully Connected Layer
-        self.fc = nn.Linear(embed_size, output_dim)
-        
+        self.fc = nn.Linear(embedding_dim, output_dim)
+
     def forward(self, x):
         embedded = self.embedding(x)
         embedded = self.pos_encoder(embedded)
@@ -85,33 +89,34 @@ class Model(nn.Module):
         transformer_output = self.dropout(transformer_output)
         logits = self.fc(transformer_output)
         return logits
-        """,
-        "forward_pass": {
-        "Embedding": r'''
-        \mathbf{E} = \text{Embedding}(x) \\~~\\
-        \mathbf{E} \in \mathbb{R}^{T \times d}
-        ''',
-        "Positional Encoding": r'''
-        \mathbf{E}' = \text{PositionalEncoding}(\mathbf{E}) \\~~\\
-        \mathbf{E}' \in \mathbb{R}^{T \times d}
-        ''',
-        "Dropout (Pre-Transformer)": r'''
-        \tilde{\mathbf{E}} = \text{Dropout}(\mathbf{E}') \\~~\\
-        \tilde{\mathbf{E}} \in \mathbb{R}^{T \times d}
-        ''',
-        "Transformer Encoder": r'''
-        \mathbf{H}_{\text{Transformer}} = \text{TransformerEncoder}(\tilde{\mathbf{E}}, \text{mask}) \\~~\\
-        \mathbf{H}_{\text{Transformer}} \in \mathbb{R}^{T \times d}
-        ''',
-        "Dropout (Post-Transformer)": r'''
-        \tilde{\mathbf{H}}_{\text{Transformer}} = \text{Dropout}(\mathbf{H}_{\text{Transformer}}) \\~~\\
-        \tilde{\mathbf{H}}_{\text{Transformer}} \in \mathbb{R}^{T \times d}
-        ''',
-        "Logits": r'''
-        \mathbf{o} = \mathbf{W}_d \cdot \tilde{\mathbf{H}}_{\text{Transformer}} + \mathbf{b}_d \\~~\\
-        \mathbf{o} \in \mathbb{R}^{T \times \text{output dim}}
-        '''
-        }
+
+        """
+        # "forward_pass": {
+        # "Embedding": r'''
+        # \mathbf{E} = \text{Embedding}(x) \\~~\\
+        # \mathbf{E} \in \mathbb{R}^{T \times d}
+        # ''',
+        # "Positional Encoding": r'''
+        # \mathbf{E}' = \text{PositionalEncoding}(\mathbf{E}) \\~~\\
+        # \mathbf{E}' \in \mathbb{R}^{T \times d}
+        # ''',
+        # "Dropout (Pre-Transformer)": r'''
+        # \tilde{\mathbf{E}} = \text{Dropout}(\mathbf{E}') \\~~\\
+        # \tilde{\mathbf{E}} \in \mathbb{R}^{T \times d}
+        # ''',
+        # "Transformer Encoder": r'''
+        # \mathbf{H}_{\text{Transformer}} = \text{TransformerEncoder}(\tilde{\mathbf{E}}, \text{mask}) \\~~\\
+        # \mathbf{H}_{\text{Transformer}} \in \mathbb{R}^{T \times d}
+        # ''',
+        # "Dropout (Post-Transformer)": r'''
+        # \tilde{\mathbf{H}}_{\text{Transformer}} = \text{Dropout}(\mathbf{H}_{\text{Transformer}}) \\~~\\
+        # \tilde{\mathbf{H}}_{\text{Transformer}} \in \mathbb{R}^{T \times d}
+        # ''',
+        # "Logits": r'''
+        # \mathbf{o} = \mathbf{W}_d \cdot \tilde{\mathbf{H}}_{\text{Transformer}} + \mathbf{b}_d \\~~\\
+        # \mathbf{o} \in \mathbb{R}^{T \times \text{output dim}}
+        # '''
+        # }
     }
 }
 
@@ -339,7 +344,17 @@ def main():
     
     # st.divider()              
     st.feedback("thumbs")
-    st.warning("""Check here for more details: [GitHub Repo🐙](https://github.com/verneylmavt/st-pos-tagging)""")
+    # st.warning("""Check here for more details: [GitHub Repo🐙](https://github.com/verneylmavt/st-pos-tagging)""")
+    mention(
+            label="GitHub Repo: verneylmavt/st-pos-tagging",
+            icon="github",
+            url="https://github.com/verneylmavt/st-pos-tagging"
+        )
+    mention(
+            label="Other ML Tasks",
+            icon="streamlit",
+            url="https://verneylogyt.streamlit.app/"
+        )
     st.divider()
     
     st.subheader("""Pre-Processing""")
@@ -349,7 +364,84 @@ def main():
     st.code(model_info[model]["parameters"], language="None")
     
     st.subheader("""Model""")
-    st.code(model_info[model]["model_code"], language="python")
+    with echo_expander(code_location="below", label="Code"):
+        import torch
+        import torch.nn as nn
+        
+        
+        class Encoding(nn.Module):
+            def __init__(self, embedding_dim, max_len=5000):
+                super(Encoding, self).__init__()
+                # Positional Encoding Tensor for Representing Position Information
+                pe = torch.zeros(max_len, embedding_dim)
+                # Tensor for Position Indices
+                position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+                # Divisor Term Tensor for Scaling Positions
+                div_term = torch.exp(torch.arange(0, embedding_dim, 2).float() * (-np.log(10000.0) / embedding_dim))
+                # Sine Component of Positional Encoding
+                pe[:, 0::2] = torch.sin(position * div_term)
+                # Cosine Component of Positional Encoding (Adjusted for Odd Dimensions)
+                if embedding_dim % 2 == 1:
+                    pe[:, 1::2] = torch.cos(position * div_term[:-1])
+                else:
+                    pe[:, 1::2] = torch.cos(position * div_term)
+                # Adding Batch Dimension to Positional Encoding
+                pe = pe.unsqueeze(0)
+                # Registering Positional Encoding as Buffer
+                self.register_buffer('pe', pe)
+            def forward(self, x):
+                # Addition of Positional Encoding to Input Tensor
+                x = x + self.pe[:, :x.size(1), :]
+                return x
+        
+        
+        class Model(nn.Module):
+            def __init__(self, vocab_size, embedding_dim, num_heads, hidden_dim, num_layers, output_dim, padding_idx, embedding_matrix, dropout=0.1):
+                super(Model, self).__init__()
+                # Embedding Layer for Token Representations
+                self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=padding_idx)
+                # Parameter Layer for Embedding Initialization w/ Pre-Trained Embedding Matrix
+                self.embedding.weight = nn.Parameter(embedding_matrix)
+                self.embedding.weight.requires_grad = True  # Gradient Enabling for Fine-Tuning
+                
+                # Positional Encoding Layer for Input Embedding Augmentation
+                self.pos_encoder = Encoding(embedding_dim)
+                # Transformer Encoder Layer for Contextual Feature Extraction
+                encoder_layer = nn.TransformerEncoderLayer(
+                    d_model=embedding_dim, 
+                    nhead=num_heads, 
+                    dim_feedforward=hidden_dim, 
+                    dropout=dropout,
+                    batch_first=True
+                )
+                # Transformer Encoder Module for Multi-Layer Encoding
+                self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, norm=nn.LayerNorm(embedding_dim))
+                # Dropout Layer for Regularization
+                self.dropout = nn.Dropout(dropout)
+                # Fully Connected Layer for Mapping Encoded Features to Output Dimension
+                self.fc = nn.Linear(embedding_dim, output_dim)
+                
+            def forward(self, x):
+                # Token Embeddings of Input Sequence
+                embedded = self.embedding(x)
+                # Addition of Positional Encoding to Token Embeddings
+                embedded = self.pos_encoder(embedded)
+                # Dropout of Embedded Tokens
+                embedded = self.dropout(embedded)
+                
+                # Key Padding Mask Generation for Transformer Encoder
+                src_key_padding_mask = (x == self.embedding.padding_idx)
+                # Contextual Feature Extraction w/ Transformer Encoder
+                transformer_output = self.transformer_encoder(
+                    embedded, 
+                    src_key_padding_mask=src_key_padding_mask
+                )
+                # Dropout of Transformer Output
+                transformer_output = self.dropout(transformer_output)
+                # Transformation of Encoded Features → Logits for POS Tags
+                logits = self.fc(transformer_output)
+                return logits
+    # st.code(model_info[model]["model_code"], language="python")
     
     if "forward_pass" in model_info[model]:
         st.subheader("Forward Pass")
@@ -359,7 +451,9 @@ def main():
     else: pass
     
     st.subheader("""Training""")
-    st.line_chart(training_data.set_index("Epoch"))
+    # st.line_chart(training_data.set_index("Epoch"))
+    with chart_container(training_data):
+        st.line_chart(training_data.set_index("Epoch"))
     
     st.subheader("""Evaluation Metrics""")
     col1, col2, col3, col4 = st.columns(4)
