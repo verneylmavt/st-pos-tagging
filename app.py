@@ -4,6 +4,7 @@ import streamlit as st
 from streamlit_extras.chart_container import chart_container
 from streamlit_extras.mention import mention
 from streamlit_extras.echo_expander import echo_expander
+# from streamlit_extras.let_it_rain import rain
 from nltk.tree import Tree
 from nltk.tree.prettyprinter import TreePrettyPrinter
 import numpy as np
@@ -233,6 +234,14 @@ def load_training_data():
     }
     return pd.DataFrame(training_data)
 
+# def example():
+#     rain(
+#         emoji="🎈",
+#         font_size=54,
+#         falling_speed=1,
+#         animation_length=1,
+#     )
+
 # ----------------------
 # Prediction Function
 # ----------------------
@@ -334,6 +343,7 @@ def main():
         
         if submit_button:
             if user_input.strip():
+                # example()
                 with st.spinner('Tagging...'):
                     tree, description = predict_pos_tag(net, word2idx, idx2pos, user_input)
                 st.code(TreePrettyPrinter(tree).text(), language="None")
