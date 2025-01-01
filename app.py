@@ -178,7 +178,7 @@ def load_model(model_name, vocab):
             logits = self.fc(transformer_output)
             return logits
     try:
-        embedding_matrix = torch.load(os.path.join("models", "embedding-matrix.pth"), weights_only=True, map_location=torch.device('cpu'))
+        embedding_matrix = torch.load(os.path.join("models", model_name,"embedding-matrix.pth"), weights_only=True, map_location=torch.device('cpu'))
         net = STransformerE(
             vocab_size=len(vocab),
             embed_size=200,
@@ -190,7 +190,7 @@ def load_model(model_name, vocab):
             embedding_matrix=embedding_matrix,
             dropout=0.16426146772147993
         )
-        net.load_state_dict(torch.load(os.path.join("models", "model-state.pt"), weights_only=True, map_location=torch.device('cpu')))
+        net.load_state_dict(torch.load(os.path.join("models", model_name,"model-state.pt"), weights_only=True, map_location=torch.device('cpu')))
     except FileNotFoundError:
         st.error(f"Model file not found for {model_name}")
         st.stop()
@@ -202,9 +202,9 @@ def load_model(model_name, vocab):
 @st.cache_data
 def load_vocab(model_name):
     try:
-        with open(os.path.join("models", "word2idx.json"), 'r') as json_file:
+        with open(os.path.join("models", model_name,"word2idx.json"), 'r') as json_file:
             word2idx = json.load(json_file)
-        with open(os.path.join("models", "idx2pos.json"), 'r') as json_file:
+        with open(os.path.join("models", model_name,"idx2pos.json"), 'r') as json_file:
             idx2pos = json.load(json_file)
             idx2pos = {int(k): v for k, v in idx2pos.items()}
         return word2idx, idx2pos
@@ -350,7 +350,7 @@ def main():
                 pos_df = pd.DataFrame(list(description.items()), columns=['POS Tag', 'Description'])
                 st.dataframe(pos_df, hide_index=True)
             else:
-                st.warning("Please enter some text.")
+                st.warning("Please enter some text for tagging.")
     
     # st.divider()              
     st.feedback("thumbs")
