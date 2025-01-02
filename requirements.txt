@@ -1,6 +1,5 @@
 streamlit
 streamlit-extras
 nltk
-numpy
 pandas
 torch
