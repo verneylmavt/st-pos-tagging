@@ -47,7 +47,7 @@ Ensure you have the following installed:
 
 Alternatively you can run `demo.ipynb` for a minimal interface to quickly test the model (implemented w/ `ipywidgets`).
 
-## Acknowledgement
+## ⚖️ Acknowledgement
 
 I acknowledge the use of the **Penn Treebank (PTB)** dataset provided by the **Linguistic Data Consortium (LDC)**. This dataset has been instrumental in conducting the research and developing this project.
 
