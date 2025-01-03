@@ -47,22 +47,13 @@ Ensure you have the following installed:
 
 Alternatively you can run `demo.ipynb` for a minimal interface to quickly test the model (implemented w/ `ipywidgets`).
 
-<!-- ### Notes
+## Acknowledgement
 
-- Ensure all required model files (ONNX models, vocabulary files, etc.) are placed in the appropriate directories as referenced in the app.
-- If you encounter issues, check the error logs and ensure all dependencies are correctly installed. -->
-<!--
+I acknowledge the use of the **Penn Treebank (PTB)** dataset provided by the **Linguistic Data Consortium (LDC)**. This dataset has been instrumental in conducting the research and developing this project.
 
-## Features
+- **Dataset Name**: Penn Treebank (PTB)
+- **Source**: [https://catalog.ldc.upenn.edu/LDC99T42](https://catalog.ldc.upenn.edu/LDC99T42)
+- **License**: The dataset is available under the LDC User Agreement for Non-Members. Please refer to the [LDC website](https://www.ldc.upenn.edu/) for licensing details.
+- **Description**: This dataset contains over one million words of text from the 1989 Wall Street Journal, annotated for part-of-speech (POS) information and skeletal syntactic structure. It is widely used for training and evaluating natural language processing models.
 
-- Multiple neural network models for sentiment analysis, including Bi-RNN, Text CNN, and Hybrid CNN-RNN with Attention Mechanism.
-- Interactive model selection and sentiment analysis interface.
-- Transparency with preprocessing steps, parameters, and architecture details displayed.
-
-## Contributions
-
-Contributions and suggestions are welcome! Feel free to open an issue or submit a pull request for improvements or additional features.
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for more details. -->
+I deeply appreciate the efforts of Linguistic Data Consortium in making this dataset available.
