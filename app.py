@@ -336,7 +336,7 @@ def main():
     #     else:
     #         st.warning("Please enter some text.")
     
-    with st.form(key="pos_form"):
+    with st.form(key="pos_tagging_form"):
         user_input = st.text_input("Enter Text Here:")
         st.caption("_e.g. The quick brown fox jumps over the lazy dog._")
         submit_button = st.form_submit_button(label="Tag")
