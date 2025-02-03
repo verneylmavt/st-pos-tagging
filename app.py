@@ -348,7 +348,7 @@ def main():
                     tree, description = predict_pos_tag(net, word2idx, idx2pos, user_input)
                 st.code(TreePrettyPrinter(tree).text(), language="None")
                 pos_df = pd.DataFrame(list(description.items()), columns=['POS Tag', 'Description'])
-                st.dataframe(pos_df, hide_index=True)
+                st.dataframe(pos_df, hide_index=True, use_container_width=True)
             else:
                 st.warning("Please enter some text for tagging.")
     
