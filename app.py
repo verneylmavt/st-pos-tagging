@@ -92,7 +92,6 @@ def load_model_info():
             transformer_output = self.dropout(transformer_output)
             logits = self.fc(transformer_output)
             return logits
-
             """
             # "forward_pass": {
             # "Embedding": r'''
@@ -120,8 +119,8 @@ def load_model_info():
             # \mathbf{o} \in \mathbb{R}^{T \times \text{output dim}}
             # '''
             # }
+            }
         }
-    }
     return model_info
 # ----------------------
 # Loading Function
