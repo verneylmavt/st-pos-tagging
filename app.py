@@ -313,6 +313,9 @@ def predict_pos_tag(net, word2idx, idx2pos, sequence):
 # Page UI
 # ----------------------
 def main():
+    st.set_page_config(page_title="POS Tagging"
+                    # layout="wide"
+                    )
     st.title("POS Tagging")
     
     model_names = list(model_info.keys())
