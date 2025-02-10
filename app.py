@@ -5,8 +5,8 @@ from streamlit_extras.chart_container import chart_container
 from streamlit_extras.mention import mention
 # from streamlit_extras.echo_expander import echo_expander
 # from streamlit_extras.let_it_rain import rain
-from nltk.tree import Tree
-from nltk.tree.prettyprinter import TreePrettyPrinter
+# from nltk.tree import Tree
+# from nltk.tree.prettyprinter import TreePrettyPrinter
 import numpy as np
 import pandas as pd
 import torch
@@ -302,6 +302,8 @@ def predict_pos_tag(net, word2idx, idx2pos, sequence):
     predicted_pos_indices = predictions[0][:lengths[0]].cpu().numpy()
     predicted_pos_tags = [idx2pos[idx] for idx in predicted_pos_indices]
     word_pos_pairs = list(zip(words, predicted_pos_tags))
+    
+    from nltk.tree import Tree
     tree = Tree('S', [Tree(pos, [word]) for word, pos in word_pos_pairs])
     ordered_unique_pos = []
     for pos in predicted_pos_tags:
@@ -457,6 +459,8 @@ def main():
                 # example()
                 with st.spinner('Tagging...'):
                     tree, description = predict_pos_tag(net, word2idx, idx2pos, user_input)
+                
+                from nltk.tree.prettyprinter import TreePrettyPrinter
                 st.code(TreePrettyPrinter(tree).text(), language="None")
                 pos_df = pd.DataFrame(list(description.items()), columns=['POS Tag', 'Description'])
                 st.dataframe(pos_df, hide_index=True, use_container_width=True)
