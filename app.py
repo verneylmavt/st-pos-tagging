@@ -3,7 +3,7 @@ import json
 import streamlit as st
 from streamlit_extras.chart_container import chart_container
 from streamlit_extras.mention import mention
-from streamlit_extras.echo_expander import echo_expander
+# from streamlit_extras.echo_expander import echo_expander
 # from streamlit_extras.let_it_rain import rain
 from nltk.tree import Tree
 from nltk.tree.prettyprinter import TreePrettyPrinter
@@ -15,112 +15,114 @@ from torch import nn
 # ----------------------
 # Model Information
 # ----------------------
-model_info = {
-    "s_transformer-e": {
-        "subheader": "Model: Multi-Head Transformer Encoder",
-        "pre_processing": """
-Dataset = Penn TreeBank Dataset
-Tokenizer = NLTK("Word Tokenizer")
-Embedding Model = GloVe("6B.200d")
-        """,
-        "parameters": """
-Batch Size = 32
+@st.cache_resource
+def load_model_info():
+    model_info = {
+        "s_transformer-e": {
+            "subheader": "Model: Multi-Head Transformer Encoder",
+            "pre_processing": """
+    Dataset = Penn TreeBank Dataset
+    Tokenizer = NLTK("Word Tokenizer")
+    Embedding Model = GloVe("6B.200d")
+            """,
+            "parameters": """
+    Batch Size = 32
 
-Vocabulary Size = 5,602
-Embedding Dimension = 200
-Number of Attention Heads = 5
-Hidden Dimension = 507
-Number of Encoder Layers = 4
-Dropout Rate = 0.16426146772147993
+    Vocabulary Size = 5,602
+    Embedding Dimension = 200
+    Number of Attention Heads = 5
+    Hidden Dimension = 507
+    Number of Encoder Layers = 4
+    Dropout Rate = 0.16426146772147993
 
-Epochs = 20
-Learning Rate = 0.001102590574546097
-Loss Function = CrossEntropyLoss
-Optimizer = AdamW
-Weight Decay = 0.01
-Hyperparameter Tuning: Bayesian Optimization
-        """,
-        "model_code": """
-class Encoding(nn.Module):
-    def __init__(self, embedding_dim, max_len=5000):
-        super(Encoding, self).__init__()
-        pe = torch.zeros(max_len, embedding_dim)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, embedding_dim, 2).float() * (-np.log(10000.0) / embedding_dim))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        if embedding_dim % 2 == 1:
-            pe[:, 1::2] = torch.cos(position * div_term[:-1])
-        else:
-            pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0)
-        self.register_buffer('pe', pe)
+    Epochs = 20
+    Learning Rate = 0.001102590574546097
+    Loss Function = CrossEntropyLoss
+    Optimizer = AdamW
+    Weight Decay = 0.01
+    Hyperparameter Tuning: Bayesian Optimization
+            """,
+            "model_code": """
+    class Encoding(nn.Module):
+        def __init__(self, embedding_dim, max_len=5000):
+            super(Encoding, self).__init__()
+            pe = torch.zeros(max_len, embedding_dim)
+            position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+            div_term = torch.exp(torch.arange(0, embedding_dim, 2).float() * (-np.log(10000.0) / embedding_dim))
+            pe[:, 0::2] = torch.sin(position * div_term)
+            if embedding_dim % 2 == 1:
+                pe[:, 1::2] = torch.cos(position * div_term[:-1])
+            else:
+                pe[:, 1::2] = torch.cos(position * div_term)
+            pe = pe.unsqueeze(0)
+            self.register_buffer('pe', pe)
 
-    def forward(self, x):
-        x = x + self.pe[:, :x.size(1), :]
-        return x
+        def forward(self, x):
+            x = x + self.pe[:, :x.size(1), :]
+            return x
 
 
-class Model(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, num_heads, hidden_dim, num_layers, output_dim, padding_idx, embedding_matrix, dropout=0.1):
-        super(Model, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=padding_idx)
-        self.embedding.weight = nn.Parameter(embedding_matrix)
-        self.embedding.weight.requires_grad = True
-        self.pos_encoder = Encoding(embedding_dim)
-        encoder_layer = nn.TransformerEncoderLayer(
-            d_model=embedding_dim, 
-            nhead=num_heads, 
-            dim_feedforward=hidden_dim, 
-            dropout=dropout,
-            batch_first=True
-        )
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, norm=nn.LayerNorm(embedding_dim))
-        self.dropout = nn.Dropout(dropout)
-        self.fc = nn.Linear(embedding_dim, output_dim)
+    class Model(nn.Module):
+        def __init__(self, vocab_size, embedding_dim, num_heads, hidden_dim, num_layers, output_dim, padding_idx, embedding_matrix, dropout=0.1):
+            super(Model, self).__init__()
+            self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=padding_idx)
+            self.embedding.weight = nn.Parameter(embedding_matrix)
+            self.embedding.weight.requires_grad = True
+            self.pos_encoder = Encoding(embedding_dim)
+            encoder_layer = nn.TransformerEncoderLayer(
+                d_model=embedding_dim, 
+                nhead=num_heads, 
+                dim_feedforward=hidden_dim, 
+                dropout=dropout,
+                batch_first=True
+            )
+            self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers, norm=nn.LayerNorm(embedding_dim))
+            self.dropout = nn.Dropout(dropout)
+            self.fc = nn.Linear(embedding_dim, output_dim)
 
-    def forward(self, x):
-        embedded = self.embedding(x)
-        embedded = self.pos_encoder(embedded)
-        embedded = self.dropout(embedded)
-        src_key_padding_mask = (x == self.embedding.padding_idx)
-        transformer_output = self.transformer_encoder(
-            embedded, 
-            src_key_padding_mask=src_key_padding_mask
-        )
-        transformer_output = self.dropout(transformer_output)
-        logits = self.fc(transformer_output)
-        return logits
+        def forward(self, x):
+            embedded = self.embedding(x)
+            embedded = self.pos_encoder(embedded)
+            embedded = self.dropout(embedded)
+            src_key_padding_mask = (x == self.embedding.padding_idx)
+            transformer_output = self.transformer_encoder(
+                embedded, 
+                src_key_padding_mask=src_key_padding_mask
+            )
+            transformer_output = self.dropout(transformer_output)
+            logits = self.fc(transformer_output)
+            return logits
 
-        """
-        # "forward_pass": {
-        # "Embedding": r'''
-        # \mathbf{E} = \text{Embedding}(x) \\~~\\
-        # \mathbf{E} \in \mathbb{R}^{T \times d}
-        # ''',
-        # "Positional Encoding": r'''
-        # \mathbf{E}' = \text{PositionalEncoding}(\mathbf{E}) \\~~\\
-        # \mathbf{E}' \in \mathbb{R}^{T \times d}
-        # ''',
-        # "Dropout (Pre-Transformer)": r'''
-        # \tilde{\mathbf{E}} = \text{Dropout}(\mathbf{E}') \\~~\\
-        # \tilde{\mathbf{E}} \in \mathbb{R}^{T \times d}
-        # ''',
-        # "Transformer Encoder": r'''
-        # \mathbf{H}_{\text{Transformer}} = \text{TransformerEncoder}(\tilde{\mathbf{E}}, \text{mask}) \\~~\\
-        # \mathbf{H}_{\text{Transformer}} \in \mathbb{R}^{T \times d}
-        # ''',
-        # "Dropout (Post-Transformer)": r'''
-        # \tilde{\mathbf{H}}_{\text{Transformer}} = \text{Dropout}(\mathbf{H}_{\text{Transformer}}) \\~~\\
-        # \tilde{\mathbf{H}}_{\text{Transformer}} \in \mathbb{R}^{T \times d}
-        # ''',
-        # "Logits": r'''
-        # \mathbf{o} = \mathbf{W}_d \cdot \tilde{\mathbf{H}}_{\text{Transformer}} + \mathbf{b}_d \\~~\\
-        # \mathbf{o} \in \mathbb{R}^{T \times \text{output dim}}
-        # '''
-        # }
+            """
+            # "forward_pass": {
+            # "Embedding": r'''
+            # \mathbf{E} = \text{Embedding}(x) \\~~\\
+            # \mathbf{E} \in \mathbb{R}^{T \times d}
+            # ''',
+            # "Positional Encoding": r'''
+            # \mathbf{E}' = \text{PositionalEncoding}(\mathbf{E}) \\~~\\
+            # \mathbf{E}' \in \mathbb{R}^{T \times d}
+            # ''',
+            # "Dropout (Pre-Transformer)": r'''
+            # \tilde{\mathbf{E}} = \text{Dropout}(\mathbf{E}') \\~~\\
+            # \tilde{\mathbf{E}} \in \mathbb{R}^{T \times d}
+            # ''',
+            # "Transformer Encoder": r'''
+            # \mathbf{H}_{\text{Transformer}} = \text{TransformerEncoder}(\tilde{\mathbf{E}}, \text{mask}) \\~~\\
+            # \mathbf{H}_{\text{Transformer}} \in \mathbb{R}^{T \times d}
+            # ''',
+            # "Dropout (Post-Transformer)": r'''
+            # \tilde{\mathbf{H}}_{\text{Transformer}} = \text{Dropout}(\mathbf{H}_{\text{Transformer}}) \\~~\\
+            # \tilde{\mathbf{H}}_{\text{Transformer}} \in \mathbb{R}^{T \times d}
+            # ''',
+            # "Logits": r'''
+            # \mathbf{o} = \mathbf{W}_d \cdot \tilde{\mathbf{H}}_{\text{Transformer}} + \mathbf{b}_d \\~~\\
+            # \mathbf{o} \in \mathbb{R}^{T \times \text{output dim}}
+            # '''
+            # }
+        }
     }
-}
-
+    return model_info
 # ----------------------
 # Loading Function
 # ----------------------
@@ -318,6 +320,7 @@ def main():
                     )
     st.title("POS Tagging")
     
+    model_info = load_model_info()
     model_names = list(model_info.keys())
     model = st.selectbox("Select a Model", model_names)
     st.divider()
@@ -377,6 +380,7 @@ def main():
     st.code(model_info[model]["parameters"], language="None")
     
     st.subheader("""Model""")
+    from streamlit_extras.echo_expander import echo_expander
     with echo_expander(code_location="below", label="Code"):
         import torch
         import torch.nn as nn
